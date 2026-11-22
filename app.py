@@ -89,9 +89,24 @@ with tab_prediksi:
 # ---------------------------------------------------------------- TAB 2
 with tab_model:
     st.subheader("Model yang dipakai")
-    m1, m2 = st.columns(2)
+    m1, m2, m3 = st.columns(3)
     m1.metric("Algoritma", "Linear Regression")
     m2.metric("R² data uji", "0,871")
+    m3.metric("MAE", "≈ 0,32 mg/m³")
+    st.caption("Evaluasi memakai 20% data terakhir berdasarkan waktu sebagai data uji.")
+
+    st.subheader("Perbandingan lima model (R² data uji)")
+    perbandingan = pd.Series({
+        "Linear Regression": 0.871,
+        "Ridge": 0.871,
+        "Gradient Boosting": 0.804,
+        "Random Forest": 0.798,
+        "Decision Tree": 0.580,
+    }).sort_values()
+    st.bar_chart(perbandingan)
+    st.write("Hubungan antara sensor dan kadar CO ternyata cukup linear, sehingga model sederhana "
+             "sudah cukup baik dan model yang lebih kompleks tidak otomatis lebih akurat.")
+    st.caption("Random Forest setelah tuning: MAE 0,376, RMSE 0,601, R² 0,800.")
 
     st.subheader("Pengaruh tiap fitur (koefisien)")
     try:
@@ -99,8 +114,9 @@ with tab_model:
         est = model.steps[-1][1] if hasattr(model, "steps") else model
         koef = pd.Series(est.coef_, index=list(kolom)).sort_values()
         st.bar_chart(koef)
-        st.caption("Koefisien dihitung dari fitur apa adanya. Jika fitur tidak diskalakan, "
-                   "besarnya angka dipengaruhi satuan masing-masing fitur, jadi jangan dibaca sebagai tingkat kepentingan.")
+        st.caption("Koefisien dihitung setelah fitur distandarkan (StandardScaler), sehingga besarnya "
+                   "bisa dibandingkan antar fitur. Karena banyak fitur saling berkorelasi, "
+                   "tanda dan besarnya tetap perlu dibaca hati-hati.")
     except Exception:
         st.info("Koefisien tidak dapat ditampilkan untuk jenis model ini.")
 
@@ -110,15 +126,45 @@ with tab_model:
 # ---------------------------------------------------------------- TAB 3
 with tab_tentang:
     st.subheader("Tujuan")
-    st.write("Memperkirakan kadar karbon monoksida (CO) dari bacaan sensor gas, "
-             "data cuaca, dan informasi waktu, menggunakan machine learning.")
+    st.write("Memprediksi kadar karbon monoksida (CO(GT), mg/m³) dari bacaan sensor gas, "
+             "data cuaca, dan informasi waktu menggunakan regresi.")
 
     st.subheader("Dataset")
-    st.write("Air Quality dari UCI Machine Learning Repository: bacaan sensor gas dan "
-             "pengukuran referensi (berakhiran GT) yang dicatat per jam.")
+    st.write("Air Quality dari UCI Machine Learning Repository: 9.357 pengukuran per jam "
+             "(Maret 2004 – April 2005), berisi bacaan sensor gas dan pengukuran referensi (berakhiran GT).")
 
-    st.subheader("Keterbatasan")
-    st.write("Model ini memakai juga fitur dari alat referensi (berakhiran GT), "
-             "sehingga belum murni hanya memakai sensor murah dan cuaca.")
+    st.subheader("Pengolahan data")
+    st.markdown(
+        "- Nilai -200 adalah kode data hilang, diganti menjadi kosong (NaN).\n"
+        "- Kolom NMHC(GT) dibuang karena sekitar 90% kosong.\n"
+        "- Baris tanpa nilai CO(GT) dibuang, sehingga tersisa 7.674 baris.\n"
+        "- Data kosong pada fitur diisi dengan interpolasi.\n"
+        "- Dari tanggal dan jam dibuat fitur Hour, Month, dan DayOfWeek."
+    )
+
+    st.subheader("Temuan utama")
+    st.markdown(
+        "- CO paling berkorelasi dengan C6H6(GT), PT08.S2(NMHC), dan PT08.S1(CO); "
+        "suhu dan kelembapan hampir tidak berkorelasi.\n"
+        "- Pola harian CO punya dua puncak, pagi dan sore, sejalan dengan jam sibuk lalu lintas.\n"
+        "- Linear Regression dan Ridge menjadi model terbaik (R² 0,871)."
+    )
+
+    st.subheader("Keterbatasan dan saran")
+    st.markdown(
+        "- Banyak data hilang, data hanya sekitar satu tahun dari satu lokasi, "
+        "dan model kurang akurat pada lonjakan CO yang tinggi.\n"
+        "- Model memakai juga fitur dari alat referensi (berakhiran GT), sehingga belum murni "
+        "hanya memakai sensor murah dan cuaca.\n"
+        "- Saran: tambah fitur CO jam sebelumnya, coba model lain seperti XGBoost, "
+        "dan uji model tanpa fitur berakhiran (GT)."
+    )
+
+    st.subheader("Anggota Kelompok 8")
+    st.markdown(
+        "- Suci Ramadhani (2417020071)\n"
+        "- Nadia Putri Pohan (2417020084)\n"
+        "- Fauzan Azim (2417020108)"
+    )
 
     st.caption("UAS Big Data dan Machine Learning – Kelompok 8")
